@@ -86,6 +86,10 @@ static av_cold int libkvazaar_init(AVCodecContext *avctx)
     cfg->vui.sar_width  = avctx->sample_aspect_ratio.num;
     cfg->vui.sar_height = avctx->sample_aspect_ratio.den;
 
+    if (avctx->flags & AV_CODEC_FLAG_INTERLACED_DCT) {
+        cfg->source_scan_type = KVZ_INTERLACING_TFF;
+    }
+
     if (ctx->kvz_params) {
         AVDictionary *dict = NULL;
         if (!av_dict_parse_string(&dict, ctx->kvz_params, "=", ",", 0)) {
@@ -192,6 +196,14 @@ static int libkvazaar_encode(AVCodecContext *avctx,
             av_log(avctx, AV_LOG_ERROR, "Failed to allocate picture.\n");
             retval = AVERROR(ENOMEM);
             goto done;
+        }
+
+        if (ctx->config->source_scan_type != KVZ_INTERLACING_NONE) {
+            if (frame->top_field_first) {
+                input_pic->interlacing = KVZ_INTERLACING_TFF;
+            } else {
+                input_pic->interlacing = KVZ_INTERLACING_BFF;
+            }
         }
 
         // Copy pixels from frame to input_pic.
